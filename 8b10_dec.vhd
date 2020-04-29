@@ -58,6 +58,7 @@ entity dec_8b10b is
     port(
 		RESET : in std_logic ;	-- Global asynchronous reset (AH) 
 		RBYTECLK : in std_logic ;	-- Master synchronous receive byte clock
+		CLKEN : in std_logic := '1';  -- Clock enable
 		AI, BI, CI, DI, EI, II : in std_logic ;
 		FI, GI, HI, JI : in std_logic ; -- Encoded input (LS..MS)		
 		KO : out std_logic ;	-- Control (K) character indicator (AH)
@@ -112,11 +113,11 @@ begin
 	IKC <= P31 and (EI and not II and not GI and not HI and not JI) ;
 	
 	-- PROCESS: KFN; Determine K output
-	KFN: process (RESET, RBYTECLK, IKA, IKB, IKC)
+	KFN: process (RESET, RBYTECLK, CLKEN, IKA, IKB, IKC)
 	begin
 		if RESET = '1' then
 			KO <= '0';
-		elsif RBYTECLK'event and RBYTECLK = '0' then
+		elsif RBYTECLK'event and RBYTECLK = '0' and CLKEN = '1' then
 			KO <= IKA or IKB or IKC;
 		end if;
 	end process KFN;
@@ -161,7 +162,7 @@ begin
 		or OR127 ; 
 	
 	-- PROCESS: DEC5B; Generate and latch LS 5 decoded bits
-	DEC5B: process (RESET, RBYTECLK, XA, XB, XC, XD, XE, AI, BI, CI, DI, EI)
+	DEC5B: process (RESET, RBYTECLK, CLKEN, XA, XB, XC, XD, XE, AI, BI, CI, DI, EI)
 	begin
 		if RESET = '1' then
 			AO <= '0' ;
@@ -169,7 +170,7 @@ begin
 			CO <= '0' ;
 			DO <= '0' ;
 			EO <= '0' ;
-		elsif RBYTECLK'event and RBYTECLK = '0' then
+		elsif RBYTECLK'event and RBYTECLK = '0' and CLKEN = '1' then
 			AO <= XA XOR AI ;	-- Least significant bit 0
 			BO <= XB XOR BI ;
 			CO <= XC XOR CI ;
@@ -207,13 +208,13 @@ begin
 		or OR134 ;
 	
 	-- PROCESS: DEC3B; Generate and latch MS 3 decoded bits
-	DEC3B: process (RESET, RBYTECLK, XF, XG, XH, FI, GI, HI)
+	DEC3B: process (RESET, RBYTECLK, CLKEN, XF, XG, XH, FI, GI, HI)
 	begin
 		if RESET = '1' then
 			FO <= '0' ;
 			GO <= '0' ;
 			HO <= '0' ;
-		elsif RBYTECLK'event and RBYTECLK ='0' then
+		elsif RBYTECLK'event and RBYTECLK ='0' and CLKEN = '1' then
 			FO <= XF XOR FI ;	-- Least significant bit 7
 			GO <= XG XOR GI ;
 			HO <= XH XOR HI ;	-- Most significant bit 10

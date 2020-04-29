@@ -52,6 +52,7 @@ entity enc_8b10b is
     port(
 		RESET : in std_logic ;		-- Global asynchronous reset (active high) 
 		SBYTECLK : in std_logic ;	-- Master synchronous send byte clock
+		CLKEN : in std_logic := '1';  -- Clock enable
 		KI : in std_logic ;			-- Control (K) input(active high)
 		AI, BI, CI, DI, EI, FI, GI, HI : in std_logic ;	-- Unencoded input data
 		JO, HO, GO, FO, IO, EO, DO, CO, BO, AO : out std_logic 	-- Encoded out 
@@ -115,9 +116,9 @@ begin
 	--
 	
 	-- PROCESS: FN3B; Latch 3b and K inputs
-    FN3B: process (SBYTECLK, FI, GI, HI, KI)
+    FN3B: process (SBYTECLK, CLKEN, FI, GI, HI, KI)
     begin	-- Falling edge of clock latches F,G,H,K inputs
-    	if SBYTECLK'event and SBYTECLK = '0' then
+    	if SBYTECLK'event and SBYTECLK = '0' and CLKEN = '1' then
         	F4 <= FI ;
         	G4 <= GI ;
 			H4 <= HI ;
@@ -126,11 +127,11 @@ begin
     end process FN3B;
 	
 	-- PROCESS: FNS; Create and latch "S" function
-	FNS: process (LRESET, SBYTECLK, PDL6, L31, DI, EI, NDL6, L13)
+	FNS: process (LRESET, SBYTECLK, CLKEN, PDL6, L31, DI, EI, NDL6, L13)
 	begin
 		if LRESET = '1' then
 			S <= '0' ;
-		elsif SBYTECLK'event and SBYTECLK = '1' then
+		elsif SBYTECLK'event and SBYTECLK = '1' and CLKEN = '1' then
 			S <= (PDL6 and L31 and DI and not EI)
 			or (NDL6 and L13 and EI and not DI) ;	
 		end if;
@@ -180,11 +181,11 @@ begin
 			or (not COMPLS4 and PD0S4) ;
 	
 	-- PROCESS: CMPLS4; Disparity determines complimenting S4
-	CMPLS4: process (LRESET, SBYTECLK, PDL6)
+	CMPLS4: process (LRESET, SBYTECLK, CLKEN, PDL6)
     begin
 		if LRESET = '1' then
 			LPDL6 <= '0' ;
-    	elsif SBYTECLK'event and SBYTECLK = '1' then	-- Rising edge
+    	elsif SBYTECLK'event and SBYTECLK = '1' and CLKEN = '1' then	-- Rising edge
 			LPDL6 <= PDL6 ; 							-- .. latches S4
     	end if;
     end process CMPLS4 ;
@@ -193,11 +194,11 @@ begin
 			xor (ND1S4 and LPDL6) ;
 
     -- PROCESS: CMPLS6; Disparity determines complimenting S6
-	CMPLS6: process (LRESET, SBYTECLK, PDL4)
+	CMPLS6: process (LRESET, SBYTECLK, CLKEN, PDL4)
     begin
 		if LRESET = '1' then
 			LPDL4 <= '0' ;
-    	elsif SBYTECLK'event and SBYTECLK = '0' then  	-- Falling edge
+    	elsif SBYTECLK'event and SBYTECLK = '0' and CLKEN = '1' then  	-- Falling edge
         	LPDL4 <= PDL4 ;           					-- .. latches S6
 		end if;
     end process CMPLS6;
@@ -226,7 +227,7 @@ begin
 		or (L22 and KI) ;
 	
 	-- PROCESS: ENC5B6B; Generate and latch LS 6 encoded bits
-	ENC5B6B: process (LRESET, SBYTECLK, COMPLS6, NAO, NBO, NCO, NDO, NEO, NIO)
+	ENC5B6B: process (LRESET, SBYTECLK, CLKEN, COMPLS6, NAO, NBO, NCO, NDO, NEO, NIO)
 	begin
 		if LRESET = '1' then
 			AO <= '0' ;
@@ -235,7 +236,7 @@ begin
 			DO <= '0' ;
 			EO <= '0' ;
 			IO <= '0' ;
-		elsif SBYTECLK'event and SBYTECLK = '1' then
+		elsif SBYTECLK'event and SBYTECLK = '1' and CLKEN = '1' then
 			AO <= COMPLS6 XOR NAO ;	-- Least significant bit 0
 			BO <= COMPLS6 XOR NBO ;
 			CO <= COMPLS6 XOR NCO ;
@@ -260,14 +261,14 @@ begin
 		or (FNEG and not H4) ;
 	
 	-- PROCESS: ENC3B4B; Generate and latch MS 4 encoded bits
-	ENC3B4B: process (LRESET, SBYTECLK, COMPLS4, NFO, NGO, NHO, NJO)
+	ENC3B4B: process (LRESET, SBYTECLK, CLKEN, COMPLS4, NFO, NGO, NHO, NJO)
 	begin
 		if LRESET = '1' then
 			FO <= '0' ;
 			GO <= '0' ;
 			HO <= '0' ;
 			JO <= '0' ;
-		elsif SBYTECLK'event and SBYTECLK ='0' then
+		elsif SBYTECLK'event and SBYTECLK ='0' and CLKEN = '1' then
 			FO <= COMPLS4 XOR NFO ;	-- Least significant bit 7
 			GO <= COMPLS4 XOR NGO ;
 			HO <= COMPLS4 XOR NHO ;
